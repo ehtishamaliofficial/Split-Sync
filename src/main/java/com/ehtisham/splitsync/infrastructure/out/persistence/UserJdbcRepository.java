@@ -3,21 +3,20 @@ package com.ehtisham.splitsync.infrastructure.out.persistence;
 import com.ehtisham.splitsync.domain.model.User;
 import com.ehtisham.splitsync.domain.port.out.UserRepository;
 import com.ehtisham.splitsync.infrastructure.out.persistence.mapper.UserRowMapper;
-import com.ehtisham.splitsync.infrastructure.out.persistence.util.JdbcTimeUtils;
+import com.ehtisham.splitsync.infrastructure.out.persistence.util.JdbcUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
-import org.postgresql.util.PGobject;
 
 import java.sql.PreparedStatement;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static com.ehtisham.splitsync.infrastructure.out.persistence.util.JdbcTimeUtils.toTimestamp;
+import static com.ehtisham.splitsync.infrastructure.out.persistence.util.JdbcUtils.toTimestamp;
 
 
 @Repository
@@ -155,7 +154,7 @@ public class UserJdbcRepository implements UserRepository {
             ps.setTimestamp(8, toTimestamp(user.getLastLogin()));
             ps.setTimestamp(9, toTimestamp(createdAt));
             ps.setTimestamp(10, toTimestamp(updatedAt));
-            ps.setObject(11, JdbcTimeUtils.toJsonbObject(user.getExtraJson()));
+            ps.setObject(11, JdbcUtils.toJsonbObject(user.getExtraJson()));
             return ps;
         }, keyHolder);
 
@@ -182,7 +181,7 @@ public class UserJdbcRepository implements UserRepository {
                 user.getStatus(),
                 toTimestamp(user.getLastLogin()),
                 toTimestamp(updatedAt),
-                JdbcTimeUtils.toJsonbObject(user.getExtraJson()),
+                JdbcUtils.toJsonbObject(user.getExtraJson()),
                 user.getId()
         );
         user.setUpdatedAt(updatedAt);
