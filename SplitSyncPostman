@@ -1,0 +1,20 @@
+{
+  "password": "Ali@Ali@12",
+  "usernameOrEmail": "ehtisham_ali"
+}
+
+
+// Parse the JSON response
+const jsonData = pm.response.json();
+
+// Extract the accessToken from response.data.accessToken
+const accessToken = jsonData.data.accessToken;
+
+// Save it to the global variable 'bearerToken'
+pm.globals.set("bearerToken", accessToken);
+
+// Log confirmation
+console.log("Access token saved to global variable 'bearerToken':", accessToken);
+
+
+http://localhost:8080/v3/api-docs
