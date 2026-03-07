@@ -7,6 +7,8 @@ import com.ehtisham.splitsync.infrastructure.out.persistence.util.JdbcUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
@@ -15,6 +17,7 @@ import java.sql.PreparedStatement;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.ehtisham.splitsync.infrastructure.out.persistence.util.JdbcUtils.toTimestamp;
 
@@ -26,6 +29,7 @@ public class UserJdbcRepository implements UserRepository {
 
     private final JdbcTemplate jdbcTemplate;
     private final UserRowMapper userRowMapper;
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Override
     public Optional<User> findById(Long id) {
@@ -131,6 +135,25 @@ public class UserJdbcRepository implements UserRepository {
         } catch (Exception e) {
             log.error("Error while trying to delete User with id {}", id);
             log.error(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<User> findAllById(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+
+        try {
+            String sql = "SELECT id, name FROM users WHERE id IN (:ids)";
+            MapSqlParameterSource params = new MapSqlParameterSource("ids", userIds);
+
+            return namedParameterJdbcTemplate.query(sql, params, userRowMapper);
+
+        } catch (Exception e) {
+            log.error("Error while trying to get Users by ids", e);
+            log.error(e.getMessage(),e);
+            return List.of();
         }
     }
 

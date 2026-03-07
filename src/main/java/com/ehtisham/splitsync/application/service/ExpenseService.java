@@ -18,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -37,7 +39,7 @@ public class ExpenseService implements ExpenseUseCase {
 
         // Validate all participants are friends
         for (var participant : request.getParticipants()) {
-            if (!friendshipRepository.exists(currentUserId, participant.getParticipantId())) {
+            if (!friendshipRepository.exists(currentUserId, participant.getParticipantId()) && !participant.getParticipantId().equals(currentUserId)) {
                 throw new InvalidRequestException("expense.split.participant_not_friend");
             }
         }
@@ -125,33 +127,57 @@ public class ExpenseService implements ExpenseUseCase {
     }
 
     private ExpenseResponse buildExpenseResponse(Expense expense, List<ExpenseSplit> splits) {
+
         BigDecimal totalShares = splits.stream()
                 .map(ExpenseSplit::getShare)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal perShareAmount = expense.getTotalAmount().multiply(totalShares);
+        // High precision division
+        BigDecimal perShareAmount = expense.getTotalAmount()
+                .divide(totalShares, 10, RoundingMode.HALF_UP);
 
-        // Fetch user names
-        List<Long> userIds = splits.stream().map(ExpenseSplit::getUserId).distinct().toList();
-        Map<Long, User> userMap = userIds.stream()
-                .map(id -> userRepository.findById(id).orElse(null))
-                .filter(Objects::nonNull)
+        // Fetch users in single query (avoid N+1 problem)
+        List<Long> userIds = splits.stream()
+                .map(ExpenseSplit::getUserId)
+                .distinct()
+                .toList();
+
+        Map<Long, User> userMap = userRepository.findAllById(userIds)
+                .stream()
                 .collect(Collectors.toMap(User::getId, Function.identity()));
 
         User paidByUser = userRepository.findById(expense.getPaidBy()).orElse(null);
 
-        List<ParticipantShareResponse> participants = splits.stream()
-                .map(split -> {
-                    BigDecimal calculatedAmount = perShareAmount.multiply(split.getShare());
-                    User user = userMap.get(split.getUserId());
-                    return ParticipantShareResponse.builder()
+        List<ParticipantShareResponse> participants = new ArrayList<>();
+        BigDecimal runningTotal = BigDecimal.ZERO;
+
+        for (int i = 0; i < splits.size(); i++) {
+            ExpenseSplit split = splits.get(i);
+
+            BigDecimal calculatedAmount;
+
+            if (i == splits.size() - 1) {
+                // Adjust last participant to match total exactly
+                calculatedAmount = expense.getTotalAmount().subtract(runningTotal);
+            } else {
+                calculatedAmount = perShareAmount
+                        .multiply(split.getShare())
+                        .setScale(2, RoundingMode.HALF_UP);
+
+                runningTotal = runningTotal.add(calculatedAmount);
+            }
+
+            User user = userMap.get(split.getUserId());
+
+            participants.add(
+                    ParticipantShareResponse.builder()
                             .userId(split.getUserId())
                             .userName(user != null ? user.getName() : null)
                             .share(split.getShare())
                             .calculatedAmount(calculatedAmount)
-                            .build();
-                })
-                .toList();
+                            .build()
+            );
+        }
 
         return ExpenseResponse.builder()
                 .id(expense.getId())
