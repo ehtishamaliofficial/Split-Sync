@@ -10,6 +10,7 @@ public interface FriendRequestRepository {
     FriendRequest save(FriendRequest request);
     Optional<FriendRequest> findById(Long id);
     Optional<FriendRequest> findPending(Long fromUser, Long toUser);
+    Optional<FriendRequest> findAny(Long fromUser, Long toUser);
     List<FriendRequest> findIncomingPending(Long toUser);
     List<FriendRequest> findOutgoingPending(Long fromUser);
     void updateStatus(Long id, String status, LocalDateTime updatedAt);

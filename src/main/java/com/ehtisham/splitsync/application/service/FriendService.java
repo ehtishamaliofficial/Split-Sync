@@ -102,6 +102,43 @@ public class FriendService implements FriendUseCase {
     }
 
     @Override
+    public List<FriendRequestResponse> getPendingOutgoing(Long userId) {
+        List<FriendRequest> requests = friendRequestRepository.findOutgoingPending(userId);
+        return requests.stream()
+                .map(req -> {
+                    User fromUser = userRepository.findById(req.getFromUser()).orElse(null);
+                    User toUser = userRepository.findById(req.getToUser()).orElse(null);
+                    return FriendRequestResponse.builder()
+                            .id(req.getId())
+                            .fromUserId(req.getFromUser())
+                            .fromUserName(fromUser != null ? fromUser.getName() : null)
+                            .fromUserAvatarUrl(fromUser != null ? fromUser.getAvatarUrl() : null)
+                            .toUserId(req.getToUser())
+                            .toUserName(toUser != null ? toUser.getName() : null)
+                            .status(req.getStatus())
+                            .createdAt(req.getCreatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void cancelFriendRequest(Long requestId, Long fromUserId) {
+        FriendRequest request = friendRequestRepository.findById(requestId)
+                .orElseThrow(() -> new InvalidRequestException("friend.request.not.found", HttpStatus.NOT_FOUND));
+
+        if (!request.getFromUser().equals(fromUserId)) {
+            throw new InvalidRequestException("friend.request.unauthorized", HttpStatus.FORBIDDEN);
+        }
+
+        if (!"PENDING".equals(request.getStatus())) {
+            throw new InvalidRequestException("friend.request.not.pending", HttpStatus.BAD_REQUEST);
+        }
+
+        friendRequestRepository.updateStatus(requestId, "CANCELLED", LocalDateTime.now());
+    }
+
+    @Override
     public List<FriendSummaryResponse> getFriends(Long userId) {
         List<Long> friendIds = friendshipRepository.findFriendIds(userId);
         return friendIds.stream()

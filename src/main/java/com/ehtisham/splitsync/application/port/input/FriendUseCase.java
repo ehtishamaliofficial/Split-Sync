@@ -9,5 +9,7 @@ public interface FriendUseCase {
     void sendFriendRequest(Long fromUserId, String email);
     void respondToRequest(Long requestId, Long respondingUserId, boolean accept);
     List<FriendRequestResponse> getPendingIncoming(Long userId);
+    List<FriendRequestResponse> getPendingOutgoing(Long userId);
+    void cancelFriendRequest(Long requestId, Long fromUserId);
     List<FriendSummaryResponse> getFriends(Long userId);
 }

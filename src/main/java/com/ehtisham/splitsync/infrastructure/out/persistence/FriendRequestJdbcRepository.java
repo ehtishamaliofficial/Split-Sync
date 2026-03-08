@@ -76,6 +76,17 @@ public class FriendRequestJdbcRepository implements FriendRequestRepository {
     }
 
     @Override
+    public Optional<FriendRequest> findAny(Long fromUser, Long toUser) {
+        try {
+            String sql = "SELECT * FROM friend_requests WHERE from_user = ? AND to_user = ? ORDER BY created_at DESC LIMIT 1";
+            return jdbcTemplate.query(sql, rowMapper, fromUser, toUser).stream().findFirst();
+        } catch (Exception e) {
+            log.error("Error finding any request from {} to {}", fromUser, toUser, e);
+            return Optional.empty();
+        }
+    }
+
+    @Override
     public List<FriendRequest> findIncomingPending(Long toUser) {
         try {
             String sql = "SELECT * FROM friend_requests WHERE to_user = ? AND status = 'PENDING' ORDER BY created_at DESC";

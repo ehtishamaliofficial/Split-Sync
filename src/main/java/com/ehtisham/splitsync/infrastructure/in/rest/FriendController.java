@@ -54,6 +54,22 @@ public class FriendController {
         return ResponseEntity.ok(ApiResponse.success(requests));
     }
 
+    @GetMapping("/requests/outgoing")
+    @Operation(summary = "Get pending outgoing friend requests")
+    public ResponseEntity<ApiResponse<List<FriendRequestResponse>>> getOutgoingRequests() {
+        Long currentUserId = currentUserProvider.getCurrentUserId();
+        List<FriendRequestResponse> requests = friendUseCase.getPendingOutgoing(currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(requests));
+    }
+
+    @PostMapping("/request/{requestId}/cancel")
+    @Operation(summary = "Cancel sent friend request")
+    public ResponseEntity<ApiResponse<Void>> cancelRequest(@PathVariable Long requestId) {
+        Long currentUserId = currentUserProvider.getCurrentUserId();
+        friendUseCase.cancelFriendRequest(requestId, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success("Friend request cancelled"));
+    }
+
     @GetMapping
     @Operation(summary = "Get my friends list")
     public ResponseEntity<ApiResponse<List<FriendSummaryResponse>>> getFriends() {
