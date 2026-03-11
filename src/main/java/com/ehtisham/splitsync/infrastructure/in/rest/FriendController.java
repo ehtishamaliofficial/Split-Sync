@@ -3,6 +3,9 @@ package com.ehtisham.splitsync.infrastructure.in.rest;
 import com.ehtisham.splitsync.application.dto.response.ApiResponse;
 import com.ehtisham.splitsync.application.dto.response.FriendRequestResponse;
 import com.ehtisham.splitsync.application.dto.response.FriendSummaryResponse;
+import com.ehtisham.splitsync.application.dto.response.FriendStatsResponse;
+import com.ehtisham.splitsync.application.dto.response.FriendBalanceResponse;
+import com.ehtisham.splitsync.application.port.input.BalanceUseCase;
 import com.ehtisham.splitsync.application.port.input.CurrentUserProvider;
 import com.ehtisham.splitsync.application.port.input.FriendUseCase;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +23,7 @@ import java.util.List;
 public class FriendController {
 
     private final FriendUseCase friendUseCase;
+    private final BalanceUseCase balanceUseCase;
     private final CurrentUserProvider currentUserProvider;
 
     @PostMapping("/request/{email}")
@@ -76,5 +80,21 @@ public class FriendController {
         Long currentUserId = currentUserProvider.getCurrentUserId();
         List<FriendSummaryResponse> friends = friendUseCase.getFriends(currentUserId);
         return ResponseEntity.ok(ApiResponse.success(friends));
+    }
+
+    @GetMapping("/stats/summary")
+    @Operation(summary = "Get financial statistics summary with all friends")
+    public ResponseEntity<ApiResponse<FriendStatsResponse>> getFriendStatsSummary() {
+        Long currentUserId = currentUserProvider.getCurrentUserId();
+        FriendStatsResponse stats = balanceUseCase.getFriendStats(currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+
+    @GetMapping("/stats/balances")
+    @Operation(summary = "Get individual balance stats for each friend")
+    public ResponseEntity<ApiResponse<List<FriendBalanceResponse>>> getFriendBalances() {
+        Long currentUserId = currentUserProvider.getCurrentUserId();
+        List<FriendBalanceResponse> balances = balanceUseCase.getFriendBalances(currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(balances));
     }
 }

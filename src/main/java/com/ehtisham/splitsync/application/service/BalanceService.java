@@ -1,6 +1,8 @@
 package com.ehtisham.splitsync.application.service;
 
 import com.ehtisham.splitsync.application.port.input.BalanceUseCase;
+import com.ehtisham.splitsync.application.dto.response.FriendStatsResponse;
+import com.ehtisham.splitsync.application.dto.response.FriendBalanceResponse;
 import com.ehtisham.splitsync.domain.model.User;
 import com.ehtisham.splitsync.domain.model.UserBalance;
 import com.ehtisham.splitsync.domain.port.out.BalanceCalculator;
@@ -34,6 +36,43 @@ public class BalanceService implements BalanceUseCase {
     @Override
     public UserBalance getBalanceWithFriend(Long currentUserId, Long friendId) {
         return computeBalance(currentUserId, friendId);
+    }
+
+    @Override
+    public FriendStatsResponse getFriendStats(Long currentUserId) {
+        List<UserBalance> balances = getMyBalances(currentUserId);
+        
+        BigDecimal totalYouOwe = balances.stream()
+                .map(UserBalance::getNetAmount)
+                .filter(net -> net.compareTo(BigDecimal.ZERO) < 0)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .abs();
+
+        BigDecimal totalOwedToYou = balances.stream()
+                .map(UserBalance::getNetAmount)
+                .filter(net -> net.compareTo(BigDecimal.ZERO) > 0)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalNetBalance = totalOwedToYou.subtract(totalYouOwe);
+
+        return FriendStatsResponse.builder()
+                .totalYouOwe(totalYouOwe)
+                .totalOwedToYou(totalOwedToYou)
+                .totalNetBalance(totalNetBalance)
+                .currency("USD") // Default currency
+                .build();
+    }
+
+    @Override
+    public List<FriendBalanceResponse> getFriendBalances(Long currentUserId) {
+        return getMyBalances(currentUserId).stream()
+                .map(balance -> FriendBalanceResponse.builder()
+                        .id(balance.getFriendId())
+                        .name(balance.getFriendName())
+                        .amount(balance.getNetAmount())
+                        .settledUp(balance.getNetAmount().compareTo(BigDecimal.ZERO) == 0)
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private UserBalance computeBalance(Long currentUserId, Long friendId) {
